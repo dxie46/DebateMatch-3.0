@@ -135,8 +135,6 @@ const NavBar = () => {
                                 </>
                             }
                         </Box>
-
-
                     </Toolbar>
                 </Container>
             </ThemeProvider>
