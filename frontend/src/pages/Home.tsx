@@ -148,8 +148,8 @@ function Home() {
                             <Button
                                 variant="contained"
                                 onClick={() => {
-                                    updateValues();
-                                    // updateElo(leftVideo.id, rightVideo.id, "right")
+                                    //updateValues();
+                                    updateElo(leftVideo.id, rightVideo.id, "right")
                                     let max = videos.length - 1;
                                     let min = 0;
                                     let index = Math.floor(Math.random() * (max - min + 1)) + min;
