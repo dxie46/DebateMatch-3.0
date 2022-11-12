@@ -93,11 +93,18 @@ const NavBar = () => {
                             </Link>
                             <Link to="/rankings" style={{ textDecoration: 'none' }}>
                                 <Button
-                                        sx={{ my: 2, color: 'white', display: 'block', fontFamily: 'monospace', fontSize: '18px' }}
-                                    >
-                                        RANKINGS
+                                    sx={{ my: 2, color: 'white', display: 'block', fontFamily: 'monospace', fontSize: '18px' }}
+                                >
+                                    RANKINGS
                                 </Button>
                             </Link>
+                            {(userEmail != "Guest") && <Link to="/favorites" style={{ textDecoration: 'none' }}>
+                                <Button
+                                    sx={{ my: 2, color: 'white', display: 'block', fontFamily: 'monospace', fontSize: '18px' }}
+                                >
+                                    FAVORITES
+                                </Button>
+                            </Link>}
                         </Box>
                         <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
                             {userEmail == "Guest" &&

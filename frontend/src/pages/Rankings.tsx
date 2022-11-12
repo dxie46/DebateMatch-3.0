@@ -5,18 +5,19 @@ import { database } from '../firebase-config';
 import { collection, getDocs } from 'firebase/firestore';
 // export const Rankings = () => { 
 // consider that ^ inside of function Rankings() in the future (or whatever the best practice is, whether it be component, this, the thing above, or something else)
-function Rankings() {
+function Rankings(inputVideos: any) {
 
-    const videosCollectionRef = collection(database, "videos");
+    // const videosCollectionRef = collection(database, "videos");
     const [rankedVideos, setRankedVideos] = useState([]);
     const topRanked = 15;
     //https://www.youtube.com/embed/4npZoNDJh3g RIP
     useEffect(() => {
         const getVideos = async () => {
-            const data: any = await getDocs(videosCollectionRef);
-            let unsortedVids = data.docs.map((doc: any) => ({ ...doc.data(), id: doc.id }));
-            let sortedVids = unsortedVids.sort(function(a: any, b: any) { return b.score - a.score; });
-            setRankedVideos(sortedVids.slice(0, topRanked));
+            inputVideos.inputVideos.then((result: any) => {
+                let unsortedVids = result;
+                let sortedVids = unsortedVids.sort(function(a: any, b: any) { return b.score - a.score; });
+                setRankedVideos(sortedVids.slice(0, topRanked));
+            })
         }
         getVideos();
     }, [])

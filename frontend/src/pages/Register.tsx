@@ -13,6 +13,8 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase-config';
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
+import { database } from '../firebase-config';
+import { setDoc, doc } from 'firebase/firestore';
 
 function Register() {
 
@@ -28,6 +30,17 @@ function Register() {
                 throw new Error("Passwords do not match");
             }
             const user = await createUserWithEmailAndPassword(auth, email, password);
+            console.log(user);
+            const docData = {
+                email: user.user.email,
+                videosWatched: {
+                    // video1: {
+                    //     url: "ooo.com",
+                    //     favorite: false
+                    // },
+                }
+            }
+            await setDoc(doc(database, "users", user.user.uid), docData);
             navigate('/sign-in', { state: { accountCreated: true } });
 
         } catch (e: any) {

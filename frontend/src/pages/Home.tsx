@@ -1,32 +1,63 @@
 import React, { Component, useState, useEffect } from 'react';
 import Card from '@mui/material/Card';
-import { Button, Grid, Typography } from '@mui/material';
-import { database } from '../firebase-config';
-import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { Button, Grid, Typography, IconButton } from '@mui/material';
+import StarBorderRoundedIcon from '@mui/icons-material/StarBorderRounded';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
+import { auth, database } from '../firebase-config';
+import { collection, doc, getDocs, getDoc, updateDoc } from 'firebase/firestore';
+import { yellow } from '@mui/material/colors';
 
-function Home() {
-
-    const [videos, setVideos] = useState([]);
-    const videosCollectionRef = collection(database, "videos")
+function Home(inputVideos: any) {
+    const [videos, setVideos] = useState<any[]>([]);
+    const [userVideosWatched, setUserVideosWatched] = useState<any[]>([]);
+    // const videosCollectionRef = collection(database, "videos")
 
     const [leftVideo, setLeftVideo] = useState({ url: "", score: 500, id: "0" });
     const [rightVideo, setRightVideo] = useState({ url: "", score: 500, id: "1" });
 
+    const [favoritedLeftVideo, setLeftVideoFavorite] = useState(false);
+    const [favoritedRightVideo, setRightVideoFavorite] = useState(false);
+
+    const [userUid, setUserUid] = useState("");
+
+    auth.onAuthStateChanged(async user => {
+        if (user && user.uid) {
+            setUserUid(user.uid);
+            console.log(user.uid)
+            if (userVideosWatched.length == 0) {
+                const userDoc = doc(database, "users", user.uid);
+                const userData = await getDoc(userDoc);
+                if (userData.exists()) {
+                    setUserVideosWatched(userData.data().videosWatched);
+                    console.log(userData.data().videosWatched);
+                } else {
+                    console.warn('Error: user does not exist')
+                }
+            }
+        } else {
+            setUserUid("");
+        }
+    });
+
     useEffect(() => {
         if (leftVideo == null || leftVideo.url == "") {
             const getVideos = async () => {
-                const data: any = await getDocs(videosCollectionRef);
-                let newVids = data.docs.map((doc: any) => ({ ...doc.data(), id: doc.id }));
-                let max = newVids.length - 1;
-                let min = 0;
-                let index = Math.floor(Math.random() * (max - min + 1)) + min;
-                setLeftVideo(newVids[index]);
-                newVids.splice(index, 1);
-                max = newVids.length - 1;
-                index = Math.floor(Math.random() * (max - min + 1)) + min;
-                setRightVideo(newVids[index]);
-                newVids.splice(index, 1);
-                setVideos(newVids);
+                inputVideos.inputVideos.then((result: any) => {
+                    // const data: any = videos.length == 0 ? inputVideos : videos;
+                    console.log(result);
+                    let newVids = videos.length == 0 ? result : videos;
+                    let max = newVids.length - 1;
+                    let min = 0;
+                    let index = Math.floor(Math.random() * (max - min + 1)) + min;
+                    setLeftVideo(newVids[index]);
+                    console.log(newVids);
+                    newVids.splice(index, 1);
+                    max = newVids.length - 1;
+                    index = Math.floor(Math.random() * (max - min + 1)) + min;
+                    setRightVideo(newVids[index]);
+                    newVids.splice(index, 1);
+                    setVideos(newVids);
+                })
             }
             getVideos();
         }
@@ -40,6 +71,56 @@ function Home() {
                 updateDoc(vidDoc, updatedFields);
             }
         })
+    }
+
+    const updateFavorites = async (vid: string, fav: boolean) => {
+        if (userUid != "") {
+
+            const userDoc = doc(database, "users", userUid);
+
+            if (vid == "left") {
+
+                await updateDoc(userDoc, {
+                    [`videosWatched.${leftVideo.id}`]: {
+                        url: leftVideo.url,
+                        favorite: fav
+                    }
+                });
+
+            } else if (vid == "right") {
+
+                await updateDoc(userDoc, {
+                    [`videosWatched.${rightVideo.id}`]: {
+                        url: rightVideo.url,
+                        favorite: fav
+                    }
+                });
+
+            }
+
+        }
+    }
+
+    const updateWatchHistory = async () => {
+        if (userUid != "") {
+
+            const userDoc = doc(database, "users", userUid);
+
+            await updateDoc(userDoc, {
+                [`videosWatched.${leftVideo.id}`]: {
+                    url: leftVideo.url,
+                    favorite: favoritedLeftVideo
+                }
+            });
+
+            await updateDoc(userDoc, {
+                [`videosWatched.${rightVideo.id}`]: {
+                    url: rightVideo.url,
+                    favorite: favoritedRightVideo
+                }
+            });
+
+        }
     }
 
     const updateElo = async (leftId: string, rightId: string, winner: string) => {
@@ -114,16 +195,52 @@ function Home() {
                                 title="video"
                             />
                         </Grid>
-                        <Grid item sx={{ textAlign: 'center', mt: 3 }}>
+                        <Grid item sx={{ textAlign: 'center', mt: 2, mr: 4 }}>
+                            <IconButton>
+                                {(!favoritedLeftVideo) &&
+                                    <StarBorderRoundedIcon
+                                        sx={{ fontSize: 30 }}
+                                        onClick={() => {
+                                            updateFavorites("left", true);
+                                            setLeftVideoFavorite(!favoritedLeftVideo);
+                                        }} />}
+                                {(favoritedLeftVideo) &&
+                                    <StarRoundedIcon
+                                        sx={{ fontSize: 30, color: yellow[700] }}
+                                        onClick={() => {
+                                            updateFavorites("left", false);
+                                            setLeftVideoFavorite(!favoritedLeftVideo);
+                                        }} />}
+                            </IconButton>
                             <Button
                                 variant="contained"
                                 onClick={() => {
-                                    updateElo(leftVideo.id, rightVideo.id, "left")
+                                    updateElo(leftVideo.id, rightVideo.id, "left");
+                                    updateWatchHistory();
+                                    setUserVideosWatched({
+                                        ...userVideosWatched,
+                                        [leftVideo.id]: {
+                                            url: leftVideo.url,
+                                            favorite: favoritedLeftVideo
+                                        },
+                                        [rightVideo.id]: {
+                                            url: rightVideo.url,
+                                            favorite: favoritedRightVideo
+                                        },
+                                    });
                                     let max = videos.length - 1;
                                     let min = 0;
                                     let index = Math.floor(Math.random() * (max - min + 1)) + min;
-                                    setRightVideo(videos[index]);
+                                    const selectedVid = videos[index];
+                                    setRightVideo(selectedVid);
                                     videos.splice(index, 1);
+                                    // check to see if right video was previously favorited and change state variable accordingly
+                                    const foundFavorited = userVideosWatched[selectedVid.id] != null && userVideosWatched[selectedVid.id].favorite == true
+                                    if (!foundFavorited) {
+                                        setRightVideoFavorite(false);
+                                    } else {
+                                        setRightVideoFavorite(true);
+                                    }
                                 }}
                             >
                                 I like this video more
@@ -144,17 +261,53 @@ function Home() {
                                 title="video"
                             />
                         </Grid>
-                        <Grid item sx={{ textAlign: 'center', mt: 3 }}>
+                        <Grid item sx={{ textAlign: 'center', mt: 2, mr: 4 }}>
+                            <IconButton>
+                                {(!favoritedRightVideo) &&
+                                    <StarBorderRoundedIcon
+                                        sx={{ fontSize: 30 }}
+                                        onClick={() => {
+                                            updateFavorites("right", true);
+                                            setRightVideoFavorite(!favoritedRightVideo);
+                                        }} />}
+                                {(favoritedRightVideo) &&
+                                    <StarRoundedIcon
+                                        sx={{ fontSize: 30, color: yellow[700] }}
+                                        onClick={() => {
+                                            updateFavorites("right", false);
+                                            setRightVideoFavorite(!favoritedRightVideo);
+                                        }} />}
+                            </IconButton>
                             <Button
                                 variant="contained"
                                 onClick={() => {
                                     //updateValues();
-                                    updateElo(leftVideo.id, rightVideo.id, "right")
+                                    updateElo(leftVideo.id, rightVideo.id, "right");
+                                    updateWatchHistory();
+                                    setUserVideosWatched({
+                                        ...userVideosWatched,
+                                        [leftVideo.id]: {
+                                            url: leftVideo.url,
+                                            favorite: favoritedLeftVideo
+                                        },
+                                        [rightVideo.id]: {
+                                            url: rightVideo.url,
+                                            favorite: favoritedRightVideo
+                                        },
+                                    });
                                     let max = videos.length - 1;
                                     let min = 0;
                                     let index = Math.floor(Math.random() * (max - min + 1)) + min;
-                                    setLeftVideo(videos[index]);
+                                    const selectedVid = videos[index];
+                                    setLeftVideo(selectedVid);
                                     videos.splice(index, 1);
+                                    const foundFavorited = userVideosWatched[selectedVid.id] != null && userVideosWatched[selectedVid.id].favorite == true
+                                    console.log(foundFavorited);
+                                    if (!foundFavorited) {
+                                        setLeftVideoFavorite(false);
+                                    } else {
+                                        setLeftVideoFavorite(true);
+                                    }
                                 }}
                             >
                                 I like this video more
